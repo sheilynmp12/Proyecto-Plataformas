@@ -1,50 +1,51 @@
-#include <stdio.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #include <stdlib.h>
 #include <time.h>
-#include <termios.h>
-#include <unistd.h>
-#include <fcntl.h>
+#include <stdio.h>
+
+#define WIDTH 800
+#define HEIGHT 400
+#define TILE 40
+#define NUM_OBS 5
 
 typedef struct { int x; int y; } Posicion;
 
 typedef struct {
-    Posicion jugador;
-    Posicion moneda;
-    Posicion obstaculos[5];
-    int vidas;
-    int puntaje;
+    Posicion jugador, moneda, obstaculos[NUM_OBS];
+    int vidas, puntaje;    
 } Juego;
 
 typedef enum { ARRIBA, ABAJO, IZQUIERDA, DERECHA, SALIR } Direccion;
 
-char getch() {
-    char buf = 0;
-    struct termios old = {0};
-    tcgetattr(0, &old);
-    old.c_lflag &= ~ICANON;
-    old.c_lflag &= ~ECHO;
-    tcsetattr(0, TCSANOW, &old);
-    read(0, &buf, 1);
-    old.c_lflag |= ICANON;
-    old.c_lflag |= ECHO;
-    tcsetattr(0, TCSADRAIN, &old);
-    return buf;
-}
 
-void inicializarJuego(Juego *j, int ancho, int alto) {
+void inicializar(Juego *j) {
     srand(time(NULL));
-    j->jugador.x = ancho / 2;
-    j->jugador.y = alto / 2;
-    j->moneda.x = rand() % ancho;
-    j->moneda.y = rand() % alto;
-    j->puntaje = 0;
+    j->jugador.x = WIDTH / (2 * TILE);
+    j->jugador.y = HEIGHT / (2 * TILE);
+    j->moneda.x = rand() % (WIDTH / TILE);
+    j->moneda.y = rand() % (HEIGHT / TILE);
     j->vidas = 3;
-    for (int i = 0; i < 5; i++) {
-        j->obstaculos[i].x = rand() % ancho;
-        j->obstaculos[i].y = rand() % alto;
+    j->puntaje = 0;
+
+    for (int i = 0; i < NUM_OBS; i++) {
+        do {
+            j->obstaculos[i].x = rand() % (WIDTH / TILE);
+            j->obstaculos[i].y = rand() % (HEIGHT / TILE);
+        } while (j->obstaculos[i].x == j->jugador.x && j->obstaculos[i].y == j->jugador.y);
     }
 }
 
+void mover(Juego *j, SDL_Keycode key) {
+    switch (key) {
+        case SDLK_w: if (j->jugador.y > 0) j->jugador.y--; break;
+        case SDLK_s: if (j->jugador.y < HEIGHT / TILE - 1) j->jugador.y++; break;
+        case SDLK_a: if (j->jugador.x > 0) j->jugador.x--; break;
+        case SDLK_d: if (j->jugador.x < WIDTH / TILE - 1) j->jugador.x++; break;
+    }
+}
+
+// cierre de cambios con sdl //
 void mostrarTablero(Juego *j, int ancho, int alto) {
     system("clear");
     for (int y = 0; y < alto; y++) {
